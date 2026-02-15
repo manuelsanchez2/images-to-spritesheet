@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Images to Sprite Sheet</title>
+    <script type="module" crossorigin src="/assets/index-B3rnp6EJ.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-xztv4T7k.css">
+  </head>
+  <body>
+    <div id="app">
+      <header class="hero">
+        <div class="hero__content">
+          <div class="badge">Sprite Lab</div>
+          <h1>Images to Sprite Sheet</h1>
+          <p>
+            Upload individual images and generate a horizontal sprite sheet with a
+            live preview before you download.
+          </p>
+        </div>
+        <div class="hero__stats">
+          <div>
+            <div class="stat" id="imageCount">0</div>
+            <span>Images</span>
+          </div>
+          <div>
+            <div class="stat" id="canvasSize">0 × 0</div>
+            <span>Canvas</span>
+          </div>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="panel">
+          <div class="panel__header">
+            <h2>Assets</h2>
+            <span class="pill">PNG, JPG, WEBP</span>
+          </div>
+          <label class="dropzone" for="fileInput">
+            <input id="fileInput" type="file" accept="image/*" multiple />
+            <div>
+              <strong>Drop your images</strong>
+              <span>or click to browse</span>
+            </div>
+          </label>
+          <div class="toolbar">
+            <button id="clearBtn" class="ghost" type="button">Clear</button>
+            <button id="downloadBtn" class="primary" type="button">
+              Download PNG
+            </button>
+          </div>
+          <div class="list" id="imageList"></div>
+        </section>
+
+        <section class="panel preview">
+          <div class="panel__header">
+            <h2>Preview</h2>
+            <span class="pill" id="previewLabel">Waiting for images</span>
+          </div>
+          <div class="options">
+            <label>
+              Padding
+              <input id="paddingInput" type="number" min="0" value="16" />
+            </label>
+            <label>
+              Align
+              <select id="alignSelect">
+                <option value="top">Top</option>
+                <option value="center" selected>Center</option>
+                <option value="bottom">Bottom</option>
+              </select>
+            </label>
+            <label>
+              Background
+              <input id="bgInput" type="color" value="#000000" />
+              <small><input id="transparentToggle" type="checkbox" checked /> Transparent</small>
+            </label>
+            <label class="grid-toggle">
+              Grid Overlay
+              <small>
+                <input id="gridToggle" type="checkbox" />
+                Show frame boundaries
+              </small>
+            </label>
+            <label>
+              Filename
+              <input id="nameInput" type="text" value="spritesheet" />
+            </label>
+          </div>
+          <div class="canvas-controls">
+            <button id="zoomOutBtn" class="ghost" type="button">-</button>
+            <input id="zoomRange" type="range" min="25" max="200" value="100" />
+            <button id="zoomInBtn" class="ghost" type="button">+</button>
+            <span id="zoomValue">100%</span>
+          </div>
+          <div class="canvas-shell">
+            <div class="canvas-stage" id="canvasStage">
+              <canvas id="previewCanvas"></canvas>
+              <canvas id="overlayCanvas"></canvas>
+            </div>
+            <div class="empty-state" id="emptyState">
+              Upload images to see your sprite sheet preview.
+            </div>
+          </div>
+          <div class="anim-preview">
+            <div class="panel__header">
+              <h2>Animation Preview</h2>
+              <span class="pill">Looping</span>
+            </div>
+            <div class="anim-controls">
+              <label>
+                Frame speed (ms)
+                <input id="frameSpeedInput" type="number" min="20" step="10" value="150" />
+              </label>
+              <button id="toggleAnimBtn" class="ghost" type="button">Pause</button>
+            </div>
+            <canvas id="animCanvas" width="260" height="200"></canvas>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
