@@ -173,7 +173,7 @@ button.ghost {
 
 .list__item {
   display: grid;
-  grid-template-columns: 56px 1fr auto;
+  grid-template-columns: 56px 1fr 140px auto;
   gap: 12px;
   align-items: center;
   background: #f8fafc;
@@ -193,6 +193,21 @@ button.ghost {
   display: grid;
   gap: 4px;
   font-size: 0.85rem;
+}
+
+.offset {
+  display: grid;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: #475569;
+}
+
+.offset input {
+  width: 100%;
+  border: 1px solid #d4d8e4;
+  border-radius: 10px;
+  padding: 6px 8px;
+  font-size: 0.8rem;
 }
 
 .list__empty {
@@ -217,6 +232,10 @@ button.ghost {
   color: #475569;
 }
 
+.grid-toggle small {
+  font-weight: 500;
+}
+
 .options input,
 .options select {
   border: 1px solid #d4d8e4;
@@ -231,6 +250,19 @@ button.ghost {
   gap: 6px;
 }
 
+.list__item {
+  cursor: grab;
+}
+
+.list__item:active {
+  cursor: grabbing;
+}
+
+.list__item.drag-over {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
 .canvas-shell {
   position: relative;
   border-radius: 18px;
@@ -240,11 +272,37 @@ button.ghost {
   overflow: auto;
 }
 
-#previewCanvas {
+.canvas-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 999px;
+  padding: 6px 12px;
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.12);
+  width: fit-content;
+}
+
+.canvas-controls input[type="range"] {
+  width: 120px;
+}
+
+.canvas-stage {
+  position: relative;
+  transform-origin: top left;
+}
+
+#previewCanvas,
+#overlayCanvas {
   display: block;
-  max-width: 100%;
   border-radius: 12px;
   background: transparent;
+}
+
+#overlayCanvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 
 .empty-state {

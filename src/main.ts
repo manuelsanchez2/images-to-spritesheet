@@ -7,12 +7,15 @@ type LoadedImage = {
   image: HTMLImageElement;
   width: number;
   height: number;
+  offsetX: number;
 };
 
 const fileInput = document.querySelector<HTMLInputElement>("#fileInput");
 const dropzone = document.querySelector<HTMLLabelElement>(".dropzone");
 const imageList = document.querySelector<HTMLDivElement>("#imageList");
 const previewCanvas = document.querySelector<HTMLCanvasElement>("#previewCanvas");
+const overlayCanvas = document.querySelector<HTMLCanvasElement>("#overlayCanvas");
+const canvasStage = document.querySelector<HTMLDivElement>("#canvasStage");
 const imageCount = document.querySelector<HTMLDivElement>("#imageCount");
 const canvasSize = document.querySelector<HTMLDivElement>("#canvasSize");
 const previewLabel = document.querySelector<HTMLSpanElement>("#previewLabel");
@@ -20,7 +23,12 @@ const paddingInput = document.querySelector<HTMLInputElement>("#paddingInput");
 const alignSelect = document.querySelector<HTMLSelectElement>("#alignSelect");
 const bgInput = document.querySelector<HTMLInputElement>("#bgInput");
 const transparentToggle = document.querySelector<HTMLInputElement>("#transparentToggle");
+const gridToggle = document.querySelector<HTMLInputElement>("#gridToggle");
 const nameInput = document.querySelector<HTMLInputElement>("#nameInput");
+const zoomOutBtn = document.querySelector<HTMLButtonElement>("#zoomOutBtn");
+const zoomInBtn = document.querySelector<HTMLButtonElement>("#zoomInBtn");
+const zoomRange = document.querySelector<HTMLInputElement>("#zoomRange");
+const zoomValue = document.querySelector<HTMLSpanElement>("#zoomValue");
 const downloadBtn = document.querySelector<HTMLButtonElement>("#downloadBtn");
 const clearBtn = document.querySelector<HTMLButtonElement>("#clearBtn");
 const emptyState = document.querySelector<HTMLDivElement>("#emptyState");
@@ -30,6 +38,8 @@ if (
   !dropzone ||
   !imageList ||
   !previewCanvas ||
+  !overlayCanvas ||
+  !canvasStage ||
   !imageCount ||
   !canvasSize ||
   !previewLabel ||
@@ -37,7 +47,12 @@ if (
   !alignSelect ||
   !bgInput ||
   !transparentToggle ||
+  !gridToggle ||
   !nameInput ||
+  !zoomOutBtn ||
+  !zoomInBtn ||
+  !zoomRange ||
+  !zoomValue ||
   !downloadBtn ||
   !clearBtn ||
   !emptyState
@@ -47,8 +62,11 @@ if (
 
 const ctx = previewCanvas.getContext("2d");
 if (!ctx) throw new Error("2D context not supported");
+const overlayCtx = overlayCanvas.getContext("2d");
+if (!overlayCtx) throw new Error("2D context not supported");
 
 const state: LoadedImage[] = [];
+let zoom = 1;
 
 const updateStats = (width: number, height: number) => {
   imageCount.textContent = String(state.length);
@@ -63,11 +81,25 @@ const clearCanvas = () => {
   ctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
 };
 
+const clearOverlay = () => {
+  overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+};
+
+const updateZoom = (value: number) => {
+  zoom = Math.min(2, Math.max(0.25, value));
+  canvasStage.style.transform = `scale(${zoom})`;
+  zoomRange.value = String(Math.round(zoom * 100));
+  zoomValue.textContent = `${Math.round(zoom * 100)}%`;
+};
+
 const drawPreview = () => {
   if (state.length === 0) {
     previewCanvas.width = 0;
     previewCanvas.height = 0;
+    overlayCanvas.width = 0;
+    overlayCanvas.height = 0;
     clearCanvas();
+    clearOverlay();
     updateStats(0, 0);
     setPreviewStatus("Waiting for images");
     emptyState.style.opacity = "1";
@@ -75,14 +107,20 @@ const drawPreview = () => {
   }
 
   const padding = Math.max(0, Number(paddingInput.value) || 0);
-  const totalWidth =
-    state.reduce((sum, item) => sum + item.width, 0) +
-    padding * (state.length + 1);
   const maxHeight = Math.max(...state.map((item) => item.height));
-  const totalHeight = maxHeight + padding * 2;
+  const maxWidth = Math.max(...state.map((item) => item.width));
+
+  const cellWidth = maxWidth;
+  const cellHeight = maxHeight;
+
+  const totalWidth =
+    cellWidth * state.length + padding * (state.length + 1);
+  const totalHeight = cellHeight + padding * 2;
 
   previewCanvas.width = totalWidth;
   previewCanvas.height = totalHeight;
+  overlayCanvas.width = totalWidth;
+  overlayCanvas.height = totalHeight;
 
   if (!transparentToggle.checked) {
     ctx.fillStyle = bgInput.value;
@@ -91,18 +129,44 @@ const drawPreview = () => {
     ctx.clearRect(0, 0, totalWidth, totalHeight);
   }
 
+  clearOverlay();
+
   let cursorX = padding;
   for (const item of state) {
+    const availableHeight = cellHeight;
     let offsetY = padding;
     if (alignSelect.value === "center") {
-      offsetY = padding + (maxHeight - item.height) / 2;
+      offsetY = padding + (availableHeight - item.height) / 2;
     }
     if (alignSelect.value === "bottom") {
-      offsetY = padding + (maxHeight - item.height);
+      offsetY = padding + (availableHeight - item.height);
     }
 
-    ctx.drawImage(item.image, cursorX, offsetY, item.width, item.height);
-    cursorX += item.width + padding;
+    const drawX = cursorX + (cellWidth - item.width) / 2 + item.offsetX;
+
+    ctx.drawImage(item.image, drawX, offsetY, item.width, item.height);
+    cursorX += cellWidth + padding;
+  }
+
+  if (gridToggle.checked) {
+    overlayCtx.save();
+    overlayCtx.strokeStyle = "rgba(37, 99, 235, 0.6)";
+    overlayCtx.lineWidth = 1;
+    overlayCtx.setLineDash([6, 6]);
+
+    const gridCellWidth = cellWidth + padding;
+    for (let i = 0; i <= state.length; i += 1) {
+      const lineX = i * gridCellWidth;
+      overlayCtx.beginPath();
+      overlayCtx.moveTo(lineX, 0);
+      overlayCtx.lineTo(lineX, totalHeight);
+      overlayCtx.stroke();
+    }
+
+    overlayCtx.beginPath();
+    overlayCtx.rect(0, 0, totalWidth, totalHeight);
+    overlayCtx.stroke();
+    overlayCtx.restore();
   }
 
   updateStats(totalWidth, totalHeight);
@@ -122,7 +186,8 @@ const addImage = async (file: File) => {
     url,
     image,
     width: image.naturalWidth,
-    height: image.naturalHeight
+    height: image.naturalHeight,
+    offsetX: 0
   };
 
   state.push(loaded);
@@ -151,6 +216,8 @@ const renderList = () => {
   for (const item of state) {
     const row = document.createElement("div");
     row.className = "list__item";
+    row.draggable = true;
+    row.dataset.id = item.id;
 
     const thumb = document.createElement("img");
     thumb.src = item.url;
@@ -163,13 +230,27 @@ const renderList = () => {
       <span>${item.width} × ${item.height}px</span>
     `;
 
+    const offsetWrap = document.createElement("label");
+    offsetWrap.className = "offset";
+    offsetWrap.innerHTML = `
+      <span>Offset X</span>
+      <input type="number" value="${item.offsetX}" step="1" />
+    `;
+    const offsetInput = offsetWrap.querySelector("input");
+    offsetInput?.addEventListener("input", (event) => {
+      const target = event.target as HTMLInputElement;
+      const value = Number(target.value);
+      item.offsetX = Number.isFinite(value) ? value : 0;
+      drawPreview();
+    });
+
     const removeBtn = document.createElement("button");
     removeBtn.className = "ghost";
     removeBtn.type = "button";
     removeBtn.textContent = "Remove";
     removeBtn.addEventListener("click", () => removeImage(item.id));
 
-    row.append(thumb, meta, removeBtn);
+    row.append(thumb, meta, offsetWrap, removeBtn);
     imageList.append(row);
   }
 };
@@ -214,6 +295,72 @@ dropzone.addEventListener("drop", (event) => {
   input.addEventListener("input", () => drawPreview());
 });
 
+[gridToggle].forEach((input) => {
+  input.addEventListener("input", () => drawPreview());
+});
+
+zoomRange.addEventListener("input", (event) => {
+  const target = event.target as HTMLInputElement;
+  const value = Number(target.value) / 100;
+  updateZoom(value);
+});
+
+zoomOutBtn.addEventListener("click", () => {
+  updateZoom(zoom - 0.1);
+});
+
+zoomInBtn.addEventListener("click", () => {
+  updateZoom(zoom + 0.1);
+});
+
+imageList.addEventListener("dragstart", (event) => {
+  const target = event.target as HTMLElement;
+  const row = target.closest<HTMLElement>(".list__item");
+  if (!row) return;
+  row.classList.add("dragging");
+  event.dataTransfer?.setData("text/plain", row.dataset.id ?? "");
+});
+
+imageList.addEventListener("dragend", (event) => {
+  const target = event.target as HTMLElement;
+  const row = target.closest<HTMLElement>(".list__item");
+  row?.classList.remove("dragging");
+});
+
+imageList.addEventListener("dragover", (event) => {
+  event.preventDefault();
+  const target = event.target as HTMLElement;
+  const row = target.closest<HTMLElement>(".list__item");
+  if (!row) return;
+  row.classList.add("drag-over");
+});
+
+imageList.addEventListener("dragleave", (event) => {
+  const target = event.target as HTMLElement;
+  const row = target.closest<HTMLElement>(".list__item");
+  row?.classList.remove("drag-over");
+});
+
+imageList.addEventListener("drop", (event) => {
+  event.preventDefault();
+  const target = event.target as HTMLElement;
+  const row = target.closest<HTMLElement>(".list__item");
+  if (!row) return;
+  row.classList.remove("drag-over");
+  const draggedId = event.dataTransfer?.getData("text/plain");
+  const targetId = row.dataset.id;
+  if (!draggedId || !targetId || draggedId === targetId) return;
+
+  const fromIndex = state.findIndex((item) => item.id === draggedId);
+  const toIndex = state.findIndex((item) => item.id === targetId);
+  if (fromIndex === -1 || toIndex === -1) return;
+
+  const [moved] = state.splice(fromIndex, 1);
+  state.splice(toIndex, 0, moved);
+  renderList();
+  drawPreview();
+});
+
 clearBtn.addEventListener("click", () => {
   while (state.length) {
     const item = state.pop();
@@ -239,3 +386,4 @@ downloadBtn.addEventListener("click", () => {
 
 renderList();
 drawPreview();
+updateZoom(1);

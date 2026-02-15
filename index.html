@@ -55,6 +55,12 @@
             <h2>Preview</h2>
             <span class="pill" id="previewLabel">Waiting for images</span>
           </div>
+          <div class="canvas-controls">
+            <button id="zoomOutBtn" class="ghost" type="button">-</button>
+            <input id="zoomRange" type="range" min="25" max="200" value="100" />
+            <button id="zoomInBtn" class="ghost" type="button">+</button>
+            <span id="zoomValue">100%</span>
+          </div>
           <div class="options">
             <label>
               Padding
@@ -73,13 +79,23 @@
               <input id="bgInput" type="color" value="#000000" />
               <small><input id="transparentToggle" type="checkbox" checked /> Transparent</small>
             </label>
+            <label class="grid-toggle">
+              Grid Overlay
+              <small>
+                <input id="gridToggle" type="checkbox" />
+                Show frame boundaries
+              </small>
+            </label>
             <label>
               Filename
               <input id="nameInput" type="text" value="spritesheet" />
             </label>
           </div>
           <div class="canvas-shell">
-            <canvas id="previewCanvas"></canvas>
+            <div class="canvas-stage" id="canvasStage">
+              <canvas id="previewCanvas"></canvas>
+              <canvas id="overlayCanvas"></canvas>
+            </div>
             <div class="empty-state" id="emptyState">
               Upload images to see your sprite sheet preview.
             </div>
