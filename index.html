@@ -100,6 +100,20 @@
               Upload images to see your sprite sheet preview.
             </div>
           </div>
+          <div class="anim-preview">
+            <div class="panel__header">
+              <h2>Animation Preview</h2>
+              <span class="pill">Looping</span>
+            </div>
+            <div class="anim-controls">
+              <label>
+                Frame speed (ms)
+                <input id="frameSpeedInput" type="number" min="20" step="10" value="150" />
+              </label>
+              <button id="toggleAnimBtn" class="ghost" type="button">Pause</button>
+            </div>
+            <canvas id="animCanvas" width="260" height="200"></canvas>
+          </div>
         </section>
       </main>
     </div>

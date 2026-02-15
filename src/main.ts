@@ -25,6 +25,9 @@ const bgInput = document.querySelector<HTMLInputElement>("#bgInput");
 const transparentToggle = document.querySelector<HTMLInputElement>("#transparentToggle");
 const gridToggle = document.querySelector<HTMLInputElement>("#gridToggle");
 const nameInput = document.querySelector<HTMLInputElement>("#nameInput");
+const frameSpeedInput = document.querySelector<HTMLInputElement>("#frameSpeedInput");
+const toggleAnimBtn = document.querySelector<HTMLButtonElement>("#toggleAnimBtn");
+const animCanvas = document.querySelector<HTMLCanvasElement>("#animCanvas");
 const zoomOutBtn = document.querySelector<HTMLButtonElement>("#zoomOutBtn");
 const zoomInBtn = document.querySelector<HTMLButtonElement>("#zoomInBtn");
 const zoomRange = document.querySelector<HTMLInputElement>("#zoomRange");
@@ -49,6 +52,9 @@ if (
   !transparentToggle ||
   !gridToggle ||
   !nameInput ||
+  !frameSpeedInput ||
+  !toggleAnimBtn ||
+  !animCanvas ||
   !zoomOutBtn ||
   !zoomInBtn ||
   !zoomRange ||
@@ -64,9 +70,14 @@ const ctx = previewCanvas.getContext("2d");
 if (!ctx) throw new Error("2D context not supported");
 const overlayCtx = overlayCanvas.getContext("2d");
 if (!overlayCtx) throw new Error("2D context not supported");
+const animCtx = animCanvas.getContext("2d");
+if (!animCtx) throw new Error("2D context not supported");
 
 const state: LoadedImage[] = [];
 let zoom = 1;
+let animTimer: number | null = null;
+let animIndex = 0;
+let animPlaying = true;
 
 const updateStats = (width: number, height: number) => {
   imageCount.textContent = String(state.length);
@@ -83,6 +94,46 @@ const clearCanvas = () => {
 
 const clearOverlay = () => {
   overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+};
+
+const clearAnim = () => {
+  animCtx.clearRect(0, 0, animCanvas.width, animCanvas.height);
+};
+
+const drawAnimFrame = () => {
+  if (state.length === 0) {
+    clearAnim();
+    return;
+  }
+
+  const frame = state[animIndex % state.length];
+  const canvasWidth = animCanvas.width;
+  const canvasHeight = animCanvas.height;
+
+  clearAnim();
+  if (!transparentToggle.checked) {
+    animCtx.fillStyle = bgInput.value;
+    animCtx.fillRect(0, 0, canvasWidth, canvasHeight);
+  }
+
+  const maxWidth = Math.max(...state.map((item) => item.width));
+  const maxHeight = Math.max(...state.map((item) => item.height));
+  const offsetX = (canvasWidth - maxWidth) / 2;
+  const offsetY = (canvasHeight - maxHeight) / 2;
+  const drawX = offsetX + (maxWidth - frame.width) / 2 + frame.offsetX;
+  const drawY = offsetY + (maxHeight - frame.height) / 2;
+
+  animCtx.drawImage(frame.image, drawX, drawY, frame.width, frame.height);
+};
+
+const startAnimation = () => {
+  const speed = Math.max(20, Number(frameSpeedInput.value) || 150);
+  if (animTimer) window.clearInterval(animTimer);
+  animTimer = window.setInterval(() => {
+    if (!animPlaying) return;
+    animIndex = (animIndex + 1) % Math.max(1, state.length);
+    drawAnimFrame();
+  }, speed);
 };
 
 const updateZoom = (value: number) => {
@@ -172,6 +223,7 @@ const drawPreview = () => {
   updateStats(totalWidth, totalHeight);
   setPreviewStatus("Ready to download");
   emptyState.style.opacity = "0";
+  drawAnimFrame();
 };
 
 const addImage = async (file: File) => {
@@ -265,6 +317,8 @@ const handleFiles = async (files: FileList | null) => {
   }
 
   fileInput.value = "";
+  animIndex = 0;
+  drawAnimFrame();
 };
 
 fileInput.addEventListener("change", (event) => {
@@ -297,6 +351,16 @@ dropzone.addEventListener("drop", (event) => {
 
 [gridToggle].forEach((input) => {
   input.addEventListener("input", () => drawPreview());
+});
+
+frameSpeedInput.addEventListener("input", () => {
+  startAnimation();
+});
+
+toggleAnimBtn.addEventListener("click", () => {
+  animPlaying = !animPlaying;
+  toggleAnimBtn.textContent = animPlaying ? "Pause" : "Play";
+  if (animPlaying) drawAnimFrame();
 });
 
 zoomRange.addEventListener("input", (event) => {
@@ -387,3 +451,4 @@ downloadBtn.addEventListener("click", () => {
 renderList();
 drawPreview();
 updateZoom(1);
+startAnimation();
